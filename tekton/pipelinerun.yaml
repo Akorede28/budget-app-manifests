@@ -1,0 +1,30 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: build-and-push-run- # ← notice “generateName” instead of “name”
+  namespace: tekton-pipelines
+spec:
+  serviceAccountName: pipeline # ← must match the ServiceAccount name
+  pipelineRef:
+    name: build-and-push
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  workspaces:
+  - name: shared-data # ←  must match the Pipeline's workspace name
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  - name: docker-credentials
+    secret:
+      secretName: regcred
+
+  params:
+  - name: repo-url
+    value: https://github.com/Akorede28/Budget-App.git
+  - name: image-reference
+    value: docker.io/akorede28/budget-app:latest

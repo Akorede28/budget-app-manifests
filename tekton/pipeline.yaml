@@ -1,0 +1,51 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: build-and-push
+  namespace: tekton-pipelines
+spec:
+  params:
+  - name: repo-url
+    type: string
+  - name: revision
+    type: string
+    default: main
+  - name: image-reference
+    type: string
+  workspaces:
+  - name: shared-data
+  - name: docker-credentials
+    description: your Docker registry pull/push creds
+  tasks:
+  - name: fetch-repo
+    taskRef:
+      apiVersion: tekton.dev/v1beta1 # ← add this
+      kind: ClusterTask
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+    params:
+    - name: url
+      value: "$(params.repo-url)"
+    - name: revision
+      value: "$(params.revision)"
+
+  - name: build-and-push
+    runAfter: [ "fetch-repo" ]
+    taskRef:
+      apiVersion: tekton.dev/v1beta1 # ← add this
+      kind: ClusterTask
+      name: kaniko
+    workspaces:
+    - name: source
+      workspace: shared-data
+    - name: dockerconfig
+      workspace: docker-credentials
+    params:
+    - name: IMAGE
+      value: "$(params.image-reference)"
+    - name: DOCKERFILE
+      value: Dockerfile
+    - name: CONTEXT
+      value: "$(workspaces.source.path)"
